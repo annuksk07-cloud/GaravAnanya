@@ -1,0 +1,118 @@
+@import "tailwindcss";
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
+  background-color: #0A1F1F;
+}
+
+:root {
+  --ivory: #FBF3E0;
+  --cream: #F3E6C8;
+  --maroon: #5E1224;
+  --crimson: #8A1C1C;
+  --marigold: #E8891C;
+  --gold: #B8862B;
+  --teal: #0F4A4A;
+  --ink: #2B1A12;
+}
+
+@layer utilities {
+  .font-garamond {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+  }
+  .font-devanagari {
+    font-family: 'Tiro Devanagari Hindi', 'Noto Serif Devanagari', serif;
+  }
+  .font-vibes {
+    font-family: 'Great Vibes', cursive;
+  }
+  .font-yatra {
+    font-family: 'Yatra One', cursive;
+  }
+  .font-cinzel {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.85; }
+}
+
+.animate-twinkle {
+  animation: twinkle 4s ease-in-out infinite;
+}
+
+@keyframes slowZoom {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.06); }
+}
+
+.animate-slow-zoom {
+  animation: slowZoom 20s ease-in-out infinite alternate;
+}
+
+@keyframes bobbing {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(8px); }
+}
+
+.animate-bobbing {
+  animation: bobbing 2.2s ease-in-out infinite;
+}
+
+@keyframes garlandSway {
+  0%, 100% { transform: rotate(-1.2deg); }
+  50% { transform: rotate(1.2deg); }
+}
+
+.ambient-garland {
+  animation: garlandSway 4.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+@keyframes chandelierPendulum {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+.ambient-chandelier {
+  animation: chandelierPendulum 5s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+@keyframes diyaFlicker {
+  0%, 100% { opacity: 0.92; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)) brightness(1); }
+  50% { opacity: 1; filter: drop-shadow(0 2px 8px rgba(242,184,75,0.5)) brightness(1.08); }
+}
+
+.ambient-diya {
+  animation: diyaFlicker 2.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-slow-zoom,
+  .animate-bobbing,
+  .ambient-garland,
+  .ambient-chandelier,
+  .ambient-diya {
+    animation: none !important;
+  }
+}
+
+@media (min-height: 801px) {
+  .show-on-tall-screen-desktop {
+    display: flex !important;
+  }
+}
+
+@media (max-height: 800px) {
+  .show-on-tall-screen-desktop {
+    display: none !important;
+  }
+}
+

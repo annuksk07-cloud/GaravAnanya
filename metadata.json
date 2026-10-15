@@ -1,0 +1,6 @@
+{
+  "name": "Wedding Invitation",
+  "description": "Interactive wedding invitation featuring an opening envelope and video experience.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
