@@ -2,74 +2,33 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
-  "routes": [
+  "headers": [
     {
-      "src": "/manifest.json",
-      "headers": {
-        "Content-Type": "application/manifest+json",
-        "Access-Control-Allow-Origin": "*"
-      },
-      "dest": "/manifest.json"
+      "source": "/manifest.json",
+      "headers": [
+        { "key": "Content-Type", "value": "application/manifest+json" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
     },
     {
-      "src": "/sw.js",
-      "headers": {
-        "Content-Type": "application/javascript",
-        "Cache-Control": "no-cache"
-      },
-      "dest": "/sw.js"
+      "source": "/sw.js",
+      "headers": [
+        { "key": "Content-Type", "value": "application/javascript" },
+        { "key": "Cache-Control", "value": "no-cache" }
+      ]
     },
     {
-      "src": "/whatsapp-preview-v2.jpg",
-      "headers": {
-        "Content-Type": "image/jpeg",
-        "Cache-Control": "public, max-age=86400"
-      },
-      "dest": "/whatsapp-preview-v2.jpg"
-    },
+      "source": "/whatsapp-preview-v3.jpg",
+      "headers": [
+        { "key": "Content-Type", "value": "image/jpeg" },
+        { "key": "Cache-Control", "value": "public, max-age=86400" }
+      ]
+    }
+  ],
+  "rewrites": [
     {
-      "src": "/whatsapp-preview.jpg",
-      "headers": {
-        "Content-Type": "image/jpeg",
-        "Cache-Control": "public, max-age=86400"
-      },
-      "dest": "/whatsapp-preview.jpg"
-    },
-    {
-      "src": "/og-preview-v2.jpg",
-      "headers": {
-        "Content-Type": "image/jpeg",
-        "Cache-Control": "public, max-age=86400"
-      },
-      "dest": "/og-preview-v2.jpg"
-    },
-    {
-      "src": "/icon-192.png",
-      "headers": {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=86400"
-      },
-      "dest": "/icon-192.png"
-    },
-    {
-      "src": "/icon-512.png",
-      "headers": {
-        "Content-Type": "image/png",
-        "Cache-Control": "public, max-age=86400"
-      },
-      "dest": "/icon-512.png"
-    },
-    {
-      "src": "/invite-v2",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/invite",
-      "dest": "/index.html"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/((?!.*\\.).*)",
+      "destination": "/index.html"
     }
   ]
 }
