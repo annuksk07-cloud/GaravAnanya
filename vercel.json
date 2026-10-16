@@ -20,6 +20,14 @@
       "dest": "/sw.js"
     },
     {
+      "src": "/whatsapp-preview-v2.jpg",
+      "headers": {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=86400"
+      },
+      "dest": "/whatsapp-preview-v2.jpg"
+    },
+    {
       "src": "/whatsapp-preview.jpg",
       "headers": {
         "Content-Type": "image/jpeg",
@@ -28,12 +36,12 @@
       "dest": "/whatsapp-preview.jpg"
     },
     {
-      "src": "/og-preview.jpg",
+      "src": "/og-preview-v2.jpg",
       "headers": {
         "Content-Type": "image/jpeg",
         "Cache-Control": "public, max-age=86400"
       },
-      "dest": "/og-preview.jpg"
+      "dest": "/og-preview-v2.jpg"
     },
     {
       "src": "/icon-192.png",
@@ -50,6 +58,10 @@
         "Cache-Control": "public, max-age=86400"
       },
       "dest": "/icon-512.png"
+    },
+    {
+      "src": "/invite-v2",
+      "dest": "/index.html"
     },
     {
       "src": "/invite",

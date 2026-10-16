@@ -250,19 +250,19 @@ app.get('/favicon.ico', async (req, res) => {
 });
 
 // WhatsApp / Social Sharing Preview Image Route (Generated STRICTLY from PWA_IDS.preview)
-app.get(['/whatsapp-preview.jpg', '/og-preview.jpg'], async (req, res) => {
+app.get(['/whatsapp-preview-v2.jpg', '/whatsapp-preview.jpg', '/og-preview-v2.jpg', '/og-preview.jpg'], async (req, res) => {
   try {
-    if (!pwaBufferCache['whatsapp-preview']) {
+    if (!pwaBufferCache['whatsapp-preview-v2']) {
       const raw = await getRawDriveBuffer(PWA_IDS.preview);
       if (!raw) return res.status(502).send('Failed to fetch preview asset');
-      pwaBufferCache['whatsapp-preview'] = await sharp(raw)
+      pwaBufferCache['whatsapp-preview-v2'] = await sharp(raw)
         .resize(1200, 630, { fit: 'cover' })
-        .jpeg({ quality: 90 })
+        .jpeg({ quality: 80, progressive: true })
         .toBuffer();
     }
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.send(pwaBufferCache['whatsapp-preview']);
+    res.send(pwaBufferCache['whatsapp-preview-v2']);
   } catch (err) {
     console.error('Error serving whatsapp preview image:', err);
     if (!res.headersSent) res.status(500).send('Error generating WhatsApp preview image');
@@ -309,9 +309,10 @@ app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache');
   res.send(`
-const CACHE_NAME = 'wedding-invitation-v1';
+const CACHE_NAME = 'wedding-invitation-v2';
 const ASSETS_TO_CACHE = [
   '/',
+  '/invite-v2',
   '/invite',
   '/index.html',
   '/manifest.json',
@@ -320,8 +321,9 @@ const ASSETS_TO_CACHE = [
   '/icon-192.png',
   '/icon-512.png',
   '/icon-maskable-512.png',
+  '/whatsapp-preview-v2.jpg',
   '/whatsapp-preview.jpg',
-  '/og-preview.jpg'
+  '/og-preview-v2.jpg'
 ];
 
 self.addEventListener('install', (event) => {
@@ -376,7 +378,7 @@ function injectOpenGraphMeta(template: string, req: express.Request): string {
   const host = req.get('host') || 'localhost:3000';
   const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
   const fullUrl = `${protocol}://${host}${req.originalUrl}`;
-  const fullImgUrl = `${protocol}://${host}/whatsapp-preview.jpg`;
+  const fullImgUrl = `${protocol}://${host}/whatsapp-preview-v2.jpg`;
 
   let html = template;
   html = html.replace(/<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${fullUrl}"`);
@@ -390,8 +392,8 @@ async function main() {
   if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
 
-    // Support both / and /invite route returning HTTP 200 without redirecting
-    app.get(['/', '/invite'], (req, res) => {
+    // Support /, /invite-v2, and /invite routes returning HTTP 200 without redirecting
+    app.get(['/', '/invite-v2', '/invite'], (req, res) => {
       const htmlPath = path.join(__dirname, 'dist', 'index.html');
       if (fs.existsSync(htmlPath)) {
         let template = fs.readFileSync(htmlPath, 'utf-8');
@@ -419,7 +421,6 @@ async function main() {
     });
     app.use(vite.middlewares);
 
-    // Support both / and /invite route in development returning HTTP 200 without redirecting
     app.use('*', async (req, res, next) => {
       const url = req.originalUrl;
       try {
