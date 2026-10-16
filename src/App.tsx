@@ -326,6 +326,23 @@ function notifyAssetListeners() {
   assetListeners.forEach((cb) => cb());
 }
 
+const PWA_IDS = {
+  "icon": "15uUNmSET8F0ye6Skchhl1Er_PKZsmJUa",
+  "preview": "1OtdbFTZBXfn0NLCikorJQHlL74MpYSuH"
+};
+
+function selfCheckPwaIds() {
+  const spec = {
+    "icon": "15uUNmSET8F0ye6Skchhl1Er_PKZsmJUa",
+    "preview": "1OtdbFTZBXfn0NLCikorJQHlL74MpYSuH"
+  };
+  if (PWA_IDS.icon === spec.icon && PWA_IDS.preview === spec.preview) {
+    console.log("ID OK");
+  } else {
+    console.log("ID MISMATCH");
+  }
+}
+
 // Self-Check Function to compare IDs with expected values
 function selfCheckAssetIds() {
   const expectedTable: Record<string, string> = {
@@ -438,6 +455,7 @@ async function preloadAsset(name: string, id: string) {
 }
 
 function startAllAssetPreloading() {
+  selfCheckPwaIds();
   selfCheckAssetIds();
   console.log(`[DECORATION SUMMARY] Preloading all ${Object.keys(ASSET_IDS).length} assets. Total planned decor count: 40`);
   Object.entries(ASSET_IDS).forEach(([name, id]) => {
@@ -2920,11 +2938,132 @@ function ScrollProgressLine({ isUnlocked }: { isUnlocked: boolean }) {
   );
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
+function usePWAInstall() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+
+  useEffect(() => {
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true;
+    setIsInstalled(isStandalone);
+
+    const userAgent = window.navigator.userAgent.toLowerCase();
+    const isIOSDevice = /iphone|ipad|ipod/.test(userAgent);
+    setIsIOS(isIOSDevice);
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const install = async () => {
+    if (!deferredPrompt) return false;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setIsInstalled(true);
+      setDeferredPrompt(null);
+      return true;
+    }
+    return false;
+  };
+
+  return { isInstallable: !!deferredPrompt, isInstalled, isIOS, install };
+}
+
+function PWAInstallButton() {
+  const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+
+  if (isInstalled) return null;
+
+  if (isInstallable) {
+    return (
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={install}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-lg text-[#FBF3E0] bg-[#4A0E1C]/90 border border-[#B8862B] hover:bg-[#5E1224] transition-all backdrop-blur-sm cursor-pointer"
+          style={{ fontFamily: "'Cinzel', serif" }}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          INSTALL APP
+        </button>
+      </div>
+    );
+  }
+
+  if (isIOS) {
+    return (
+      <div className="fixed top-4 right-4 z-50">
+        <button
+          onClick={() => setShowIOSGuide(true)}
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-lg text-[#FBF3E0] bg-[#4A0E1C]/90 border border-[#B8862B] hover:bg-[#5E1224] transition-all backdrop-blur-sm cursor-pointer"
+          style={{ fontFamily: "'Cinzel', serif" }}
+        >
+          INSTALL APP
+        </button>
+        {showIOSGuide && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+            <div className="w-full max-w-xs rounded-2xl bg-[#FBF3E0] p-5 shadow-2xl border-2 border-[#B8862B] text-center">
+              <h3 className="text-base font-bold text-[#4A0E1C]" style={{ fontFamily: "'Cinzel', serif" }}>
+                Install on iPhone / iPad
+              </h3>
+              <p className="mt-2 text-xs text-[#5C2B18] leading-relaxed" style={{ fontFamily: "'Cormorant Garamond', serif" }}>
+                1. Tap the <strong className="text-[#4A0E1C]">Share</strong> button in Safari toolbar.<br />
+                2. Scroll down and tap <strong className="text-[#4A0E1C]">Add to Home Screen</strong>.
+              </p>
+              <button
+                onClick={() => setShowIOSGuide(false)}
+                className="mt-4 w-full rounded-xl bg-[#4A0E1C] py-2 text-xs font-semibold text-[#FBF3E0] hover:bg-[#5E1224] cursor-pointer"
+                style={{ fontFamily: "'Cinzel', serif" }}
+              >
+                GOT IT
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}
+
 const WALL_TEXT_SHADOW = '0 1px 0 rgba(255,248,225,0.9), 0 3px 8px rgba(94,18,36,0.18)';
 
 export default function App() {
   useEffect(() => {
     startAllAssetPreloading();
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.warn('Service worker registration failed:', err);
+        });
+      });
+    }
   }, []);
 
   const [envelopeIndex, setEnvelopeIndex] = useState(0);
@@ -3399,6 +3538,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#0A1F1F] text-[#F3E6C8] select-none cursor-none [webkit-tap-highlight-color:transparent] font-sans relative overflow-x-clip">
       
+      {/* PWA INSTALL BUTTON */}
+      <PWAInstallButton />
+
       {/* PETAL LAYER (Only active after scroll is unlocked) */}
       <PetalLayer isUnlocked={!isScrollLocked} />
 
