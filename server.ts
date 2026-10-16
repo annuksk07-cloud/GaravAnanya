@@ -14,6 +14,9 @@ const PORT = Number(process.env.PORT) || 3000;
 
 const ENVELOPE_ID = '1zaZ2nIJZOj2RrS4ImbTrolJtmqeLhxGJ';
 
+// STRICT SEPARATION:
+// FIRST IMAGE (preview): 1OtdbFTZBXfn0NLCikorJQHlL74MpYSuH - ONLY for WhatsApp / Social sharing preview
+// SECOND IMAGE (icon): 15uUNmSET8F0ye6Skchhl1Er_PKZsmJUa - ONLY for PWA App Icon
 const PWA_IDS = {
   "icon": "15uUNmSET8F0ye6Skchhl1Er_PKZsmJUa",
   "preview": "1OtdbFTZBXfn0NLCikorJQHlL74MpYSuH"
@@ -146,7 +149,7 @@ app.get('/api/drive-asset/:id', async (req, res) => {
   }
 });
 
-// PWA Icon & Preview Routes
+// PWA Icon Routes (Generated STRICTLY from PWA_IDS.icon)
 app.get('/icon-192.png', async (req, res) => {
   try {
     if (!pwaBufferCache['icon-192']) {
@@ -246,22 +249,23 @@ app.get('/favicon.ico', async (req, res) => {
   }
 });
 
-app.get('/og-preview.jpg', async (req, res) => {
+// WhatsApp / Social Sharing Preview Image Route (Generated STRICTLY from PWA_IDS.preview)
+app.get(['/whatsapp-preview.jpg', '/og-preview.jpg'], async (req, res) => {
   try {
-    if (!pwaBufferCache['og-preview']) {
+    if (!pwaBufferCache['whatsapp-preview']) {
       const raw = await getRawDriveBuffer(PWA_IDS.preview);
       if (!raw) return res.status(502).send('Failed to fetch preview asset');
-      pwaBufferCache['og-preview'] = await sharp(raw)
+      pwaBufferCache['whatsapp-preview'] = await sharp(raw)
         .resize(1200, 630, { fit: 'cover' })
         .jpeg({ quality: 90 })
         .toBuffer();
     }
     res.setHeader('Content-Type', 'image/jpeg');
     res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.send(pwaBufferCache['og-preview']);
+    res.send(pwaBufferCache['whatsapp-preview']);
   } catch (err) {
-    console.error('Error serving /og-preview.jpg:', err);
-    if (!res.headersSent) res.status(500).send('Error generating OG preview image');
+    console.error('Error serving whatsapp preview image:', err);
+    if (!res.headersSent) res.status(500).send('Error generating WhatsApp preview image');
   }
 });
 
@@ -308,6 +312,7 @@ app.get('/sw.js', (req, res) => {
 const CACHE_NAME = 'wedding-invitation-v1';
 const ASSETS_TO_CACHE = [
   '/',
+  '/invite',
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
@@ -315,6 +320,7 @@ const ASSETS_TO_CACHE = [
   '/icon-192.png',
   '/icon-512.png',
   '/icon-maskable-512.png',
+  '/whatsapp-preview.jpg',
   '/og-preview.jpg'
 ];
 
@@ -365,11 +371,46 @@ self.addEventListener('fetch', (event) => {
   `);
 });
 
+// Helper function to inject dynamic OG URLs into HTML template
+function injectOpenGraphMeta(template: string, req: express.Request): string {
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+  const fullUrl = `${protocol}://${host}${req.originalUrl}`;
+  const fullImgUrl = `${protocol}://${host}/whatsapp-preview.jpg`;
+
+  let html = template;
+  html = html.replace(/<meta property="og:url" content="[^"]*"/, `<meta property="og:url" content="${fullUrl}"`);
+  html = html.replace(/<meta property="og:image" content="[^"]*"/, `<meta property="og:image" content="${fullImgUrl}"`);
+  html = html.replace(/<meta property="og:image:secure_url" content="[^"]*"/, `<meta property="og:image:secure_url" content="${fullImgUrl}"`);
+  html = html.replace(/<meta name="twitter:image" content="[^"]*"/, `<meta name="twitter:image" content="${fullImgUrl}"`);
+  return html;
+}
+
 async function main() {
   if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, 'dist')));
+    app.use(express.static(path.join(__dirname, 'dist'), { index: false }));
+
+    // Support both / and /invite route returning HTTP 200 without redirecting
+    app.get(['/', '/invite'], (req, res) => {
+      const htmlPath = path.join(__dirname, 'dist', 'index.html');
+      if (fs.existsSync(htmlPath)) {
+        let template = fs.readFileSync(htmlPath, 'utf-8');
+        template = injectOpenGraphMeta(template, req);
+        res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
+      } else {
+        res.status(404).send('Not Found');
+      }
+    });
+
     app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+      const htmlPath = path.join(__dirname, 'dist', 'index.html');
+      if (fs.existsSync(htmlPath)) {
+        let template = fs.readFileSync(htmlPath, 'utf-8');
+        template = injectOpenGraphMeta(template, req);
+        res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
+      } else {
+        res.status(404).send('Not Found');
+      }
     });
   } else {
     const vite = await createViteServer({
@@ -377,12 +418,15 @@ async function main() {
       appType: 'custom',
     });
     app.use(vite.middlewares);
+
+    // Support both / and /invite route in development returning HTTP 200 without redirecting
     app.use('*', async (req, res, next) => {
       const url = req.originalUrl;
       try {
         let template = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
         template = await vite.transformIndexHtml(url, template);
-        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+        template = injectOpenGraphMeta(template, req);
+        res.status(200).set({ 'Content-Type': 'text/html' }).send(template);
       } catch (e) {
         vite.ssrFixStacktrace(e as Error);
         next(e);
