@@ -3589,6 +3589,7 @@ export default function App() {
         {/* Layer 10: Wall Text Overlay (Appears on video end on the empty wall area) */}
         {videoEnded && videoRect.width > 0 && wallTextReady && (
           <div
+            id="names-overlay"
             style={{
               position: 'absolute',
               top: `${videoRect.top}px`,

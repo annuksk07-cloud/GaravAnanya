@@ -36,9 +36,9 @@
     <link rel="preload" as="image" href="https://lh3.googleusercontent.com/d/1zaZ2nIJZOj2RrS4ImbTrolJtmqeLhxGJ" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Great+Vibes&family=Jost:wght@300;400&family=Tiro+Devanagari+Hindi:ital@0;1&family=Yatra+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Great+Vibes&family=Jost:wght@300;400&family=Pinyon+Script&family=Tiro+Devanagari+Hindi:ital@0;1&family=Yatra+One&display=swap" rel="stylesheet">
 
-    <!-- Video Container & Skip Button Styles -->
+    <!-- Video Container, Skip Button & Video Overlay Styles -->
     <style>
       .video-container-wrapper {
         width: min(100vw, calc(100dvh * 9 / 16));
@@ -78,12 +78,108 @@
       .skip-btn-fixed.fade-in {
         opacity: 1;
       }
+
+      /* Names Overlay Styles Inside Video Box */
+      #video-names-overlay {
+        position: absolute;
+        top: 36%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 80%;
+        max-width: 520px;
+        text-align: center;
+        z-index: 5;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 1.6s ease-in-out;
+      }
+      #video-names-overlay.overlay-visible {
+        opacity: 1 !important;
+      }
+      .glow-bg {
+        position: absolute;
+        inset: -20px;
+        background: radial-gradient(ellipse at center, rgba(212,169,79,0.18) 0%, rgba(212,169,79,0) 70%);
+        pointer-events: none;
+        z-index: -1;
+      }
+      .overlay-line1 {
+        font-family: 'Jost', sans-serif;
+        font-weight: 300;
+        color: #f0d9a0;
+        letter-spacing: 0.3em;
+        font-size: clamp(11px, 2.6vw, 14px);
+        margin: 0 0 8px 0;
+        text-transform: uppercase;
+      }
+      .overlay-line2 {
+        font-family: 'Pinyon Script', 'Great Vibes', cursive;
+        color: #d4a94f;
+        text-shadow: 0 0 12px rgba(212,169,79,0.45);
+        font-size: clamp(40px, 11vw, 72px);
+        margin: 0;
+        line-height: 1.1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25em;
+      }
+      .overlay-line2 span {
+        display: inline-block;
+        opacity: 0;
+        transform: translateY(6px);
+        transition: opacity 0.9s ease-out, transform 0.9s ease-out;
+      }
+      #video-names-overlay.overlay-visible .groom-name {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.2s;
+      }
+      #video-names-overlay.overlay-visible .ampersand {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 0.6s;
+        font-size: 0.7em;
+      }
+      #video-names-overlay.overlay-visible .bride-name {
+        opacity: 1;
+        transform: translateY(0);
+        transition-delay: 1.0s;
+      }
+      .overlay-divider {
+        width: 60px;
+        height: 1px;
+        background: #d4a94f;
+        margin: 12px auto;
+        opacity: 0.8;
+      }
+      .overlay-parents {
+        font-family: 'Cormorant Garamond', serif;
+        color: #f7efdc;
+        font-size: clamp(12px, 3vw, 16px);
+        margin: 4px 0;
+        line-height: 1.3;
+      }
+
+      /* Invitation card initial state */
+      #invitation-card {
+        opacity: 0;
+        pointer-events: none;
+        visibility: hidden;
+        transition: opacity 1.2s ease-in-out;
+      }
+      #invitation-card.invitation-card-visible {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        visibility: visible !important;
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <script>
       (function() {
+        const SHOW_CODE_NAMES = false;   // false: the names come from the video itself. true: the names are drawn by code on the wall.
         const FINAL_VIDEO_SRC = "https://drive.google.com/uc?export=download&id=1yYMLp3XppaSV6__GcE_4FkmUQeAjR72_";
         const VIDEO_CANDIDATES = [
           "/video.mp4",
@@ -96,6 +192,58 @@
         let fadeInTimer = null;
         let canplayReached = false;
         let canplayTimer = null;
+        let overlayShown = false;
+
+        function showOverlay(video, isFallback) {
+          if (overlayShown) return;
+          overlayShown = true;
+
+          console.log("OVERLAY_SHOWN");
+
+          const container = (video && video.parentElement) || document.getElementById('video-container') || document.body;
+
+          if (isFallback) {
+            container.style.backgroundColor = '#08162b';
+          }
+
+          if (SHOW_CODE_NAMES) {
+            let overlay = document.getElementById('video-names-overlay');
+            if (!overlay) {
+              overlay = document.createElement('div');
+              overlay.id = 'video-names-overlay';
+              overlay.innerHTML = `
+                <div class="glow-bg"></div>
+                <p class="overlay-line1">Shri Radhe Krishna ki kripa se</p>
+                <h1 class="overlay-line2">
+                  <span class="groom-name">Aarav</span>
+                  <span class="ampersand">&amp;</span>
+                  <span class="bride-name">Ananya</span>
+                </h1>
+                <div class="overlay-divider"></div>
+                <p class="overlay-parents">Mr. &amp; Mrs. Rajesh Sharma</p>
+                <p class="overlay-parents">Mr. &amp; Mrs. Sunil Verma</p>
+              `;
+              container.appendChild(overlay);
+            }
+
+            void overlay.offsetWidth;
+            overlay.classList.add('overlay-visible');
+          }
+
+          // Reveal invitation card below video & unlock scrolling
+          const invCard = document.getElementById('invitation-card') || document.querySelector('section:nth-of-type(2)') || document.querySelectorAll('section')[1];
+          if (invCard) {
+            invCard.classList.add('invitation-card-visible');
+          }
+
+          try {
+            document.documentElement.style.overflow = 'auto';
+            document.body.style.overflow = 'auto';
+            document.body.style.touchAction = 'auto';
+          } catch (err) {
+            console.warn('Scroll unlock error:', err);
+          }
+        }
 
         function createSkipButton(video) {
           if (skipBtn) return;
@@ -118,22 +266,12 @@
                 if (!video.paused) {
                   video.pause();
                 }
-                if (!isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
-                  video.currentTime = Math.max(0, video.duration - 0.1);
-                }
-                video.dispatchEvent(new Event('ended'));
               } catch (err) {
                 console.warn('Skip pause warning:', err);
               }
             }
 
-            try {
-              document.documentElement.style.overflow = 'auto';
-              document.body.style.overflow = 'auto';
-              document.body.style.touchAction = 'auto';
-            } catch (err) {
-              console.warn('Scroll unlock error:', err);
-            }
+            showOverlay(video, true);
 
             const invCard = document.getElementById('invitation-card') || document.querySelector('section:nth-of-type(2)') || document.querySelectorAll('section')[1];
             if (invCard) {
@@ -250,12 +388,25 @@
                   console.log('waiting');
                 });
 
+                // Listen to timeupdate: when currentTime >= duration - 2.0s
+                video.addEventListener('timeupdate', function() {
+                  if (!overlayShown && video.duration && !isNaN(video.duration) && video.duration > 0) {
+                    if (video.currentTime >= video.duration - 2.0) {
+                      showOverlay(video, false);
+                    }
+                  }
+                });
+
+                video.addEventListener('ended', function() {
+                  console.log('Video ended event');
+                  showOverlay(video, false);
+                });
+
                 video.addEventListener('error', function() {
                   const code = video.error ? video.error.code : null;
                   const msg = video.error ? video.error.message : null;
                   console.log('error', code, msg);
 
-                  // If error occurs and candidate URLs remain, try next candidate URL
                   if (candidateIndex < VIDEO_CANDIDATES.length - 1) {
                     candidateIndex++;
                     console.log('Trying fallback video source:', VIDEO_CANDIDATES[candidateIndex]);
@@ -267,11 +418,7 @@
                       console.warn('Fallback video load error:', e);
                     }
                   } else {
-                    const container = (video && video.parentElement) || document.getElementById('video-container');
-                    if (container) {
-                      container.style.backgroundColor = '#0A1F1F';
-                    }
-                    video.dispatchEvent(new Event('ended'));
+                    showOverlay(video, true);
                   }
                 });
 
@@ -283,11 +430,7 @@
                 canplayTimer = setTimeout(function() {
                   if (!canplayReached) {
                     console.log('VIDEO_TIMEOUT');
-                    const container = (video && video.parentElement) || document.getElementById('video-container');
-                    if (container) {
-                      container.style.backgroundColor = '#0A1F1F';
-                    }
-                    video.dispatchEvent(new Event('ended'));
+                    showOverlay(video, true);
                   }
                 }, 8000);
               }
