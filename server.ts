@@ -149,6 +149,61 @@ app.get('/api/drive-asset/:id', async (req, res) => {
   }
 });
 
+// Route for serving video with Range streaming support
+app.get(['/video.mp4', '/api/video'], (req, res) => {
+  try {
+    const localPaths = [
+      path.resolve(__dirname, 'public/video.mp4'),
+      path.resolve(__dirname, '8146_gwr_video_mvp.mp4'),
+    ];
+
+    let videoPath = '';
+    for (const p of localPaths) {
+      if (fs.existsSync(p)) {
+        videoPath = p;
+        break;
+      }
+    }
+
+    if (!videoPath) {
+      return res.status(404).send('Video file not found');
+    }
+
+    const stat = fs.statSync(videoPath);
+    const fileSize = stat.size;
+    const range = req.headers.range;
+
+    if (range) {
+      const parts = range.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = end - start + 1;
+      const file = fs.createReadStream(videoPath, { start, end });
+      const head = {
+        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Accept-Ranges': 'bytes',
+        'Content-Length': chunksize,
+        'Content-Type': 'video/mp4',
+      };
+      res.writeHead(206, head);
+      file.pipe(res);
+    } else {
+      const head = {
+        'Content-Length': fileSize,
+        'Content-Type': 'video/mp4',
+        'Accept-Ranges': 'bytes',
+      };
+      res.writeHead(200, head);
+      fs.createReadStream(videoPath).pipe(res);
+    }
+  } catch (err) {
+    console.error('Error serving video:', err);
+    if (!res.headersSent) {
+      res.status(500).send('Error serving video');
+    }
+  }
+});
+
 // PWA Icon Routes (Generated STRICTLY from PWA_IDS.icon)
 app.get('/icon-192.png', async (req, res) => {
   try {

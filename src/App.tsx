@@ -3414,6 +3414,11 @@ export default function App() {
         setIsOpen(true);
         setTimeout(() => {
           setEnvelopeHidden(true);
+          try {
+            window.dispatchEvent(new CustomEvent('opening:complete'));
+          } catch (e) {
+            console.warn('opening:complete dispatch warning:', e);
+          }
         }, 3000); // Exactly 2.8s split animation + 200ms
       };
 
@@ -3550,23 +3555,36 @@ export default function App() {
       {/* SECTION 1: VIDEO SCREEN & WALL TEXT OVERLAY */}
       <section className="relative w-screen h-[100dvh] overflow-hidden bg-black flex items-center justify-center">
         
-        {/* Layer 0: HTML5 Video Element */}
-        <video
-          ref={videoRef}
-          src="/video.mp4"
-          playsInline
-          preload="auto"
-          disablePictureInPicture
-          disableRemotePlayback
-          controlsList="nodownload nofullscreen noremoteplayback"
-          onLoadedMetadata={updateVideoRect}
-          onCanPlay={handleCanPlay}
-          onEnded={handleVideoEnded}
-          style={{ pointerEvents: 'none' }}
-          className="w-[100vw] h-[100dvh] object-contain bg-black pointer-events-none z-0"
+        {/* Layer 0: 9:16 Video Container */}
+        <div
+          id="video-container"
+          style={{
+            width: 'min(100vw, calc(100dvh * 9 / 16))',
+            height: 'min(100dvh, calc(100vw * 16 / 9))',
+            margin: '0 auto',
+            position: 'relative',
+            backgroundColor: '#000',
+            overflow: 'hidden',
+          }}
+          className="relative flex items-center justify-center bg-black overflow-hidden z-0"
         >
-          Your browser does not support HTML5 video.
-        </video>
+          <video
+            ref={videoRef}
+            src="/video.mp4"
+            playsInline
+            preload="auto"
+            disablePictureInPicture
+            disableRemotePlayback
+            controlsList="nodownload nofullscreen noremoteplayback"
+            onLoadedMetadata={updateVideoRect}
+            onCanPlay={handleCanPlay}
+            onEnded={handleVideoEnded}
+            style={{ pointerEvents: 'none', width: '100%', height: '100%', objectFit: 'cover' }}
+            className="w-full h-full object-cover bg-black pointer-events-none"
+          >
+            Your browser does not support HTML5 video.
+          </video>
+        </div>
 
         {/* Layer 10: Wall Text Overlay (Appears on video end on the empty wall area) */}
         {videoEnded && videoRect.width > 0 && wallTextReady && (
@@ -3883,6 +3901,7 @@ export default function App() {
       {/* SECTION A - INVITATION */}
       <section
         ref={invitationRef}
+        id="invitation-card"
         style={{ contain: 'paint', paddingTop: 'min(46vw, 340px)', paddingBottom: 'min(46vw, 340px)' }}
         className="relative w-full min-h-[100svh] bg-[var(--ivory)] text-[var(--ink)] flex flex-col items-center justify-center px-[6vw] overflow-hidden"
       >

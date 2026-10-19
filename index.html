@@ -36,10 +36,291 @@
     <link rel="preload" as="image" href="https://lh3.googleusercontent.com/d/1zaZ2nIJZOj2RrS4ImbTrolJtmqeLhxGJ" fetchpriority="high" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Great+Vibes&family=Tiro+Devanagari+Hindi:ital@0;1&family=Yatra+One&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@1,500;1,600&family=Great+Vibes&family=Jost:wght@300;400&family=Tiro+Devanagari+Hindi:ital@0;1&family=Yatra+One&display=swap" rel="stylesheet">
+
+    <!-- Video Container & Skip Button Styles -->
+    <style>
+      .video-container-wrapper {
+        width: min(100vw, calc(100dvh * 9 / 16));
+        height: min(100dvh, calc(100vw * 16 / 9));
+        margin: 0 auto;
+        position: relative;
+        background: #000;
+        overflow: hidden;
+      }
+      .skip-btn-fixed {
+        position: fixed;
+        right: 4vw;
+        bottom: max(4vh, env(safe-area-inset-bottom));
+        z-index: 9999;
+        width: 14vw;
+        max-width: 60px;
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        background: #08162b;
+        border: 1px solid #d4a94f;
+        font-family: 'Jost', sans-serif;
+        font-size: clamp(9px, 2.4vw, 12px);
+        letter-spacing: 0.1em;
+        color: #f0d9a0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.5s ease-in-out;
+        pointer-events: auto;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        box-sizing: border-box;
+        text-transform: uppercase;
+      }
+      .skip-btn-fixed.fade-in {
+        opacity: 1;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function() {
+        const FINAL_VIDEO_SRC = "https://drive.google.com/uc?export=download&id=1yYMLp3XppaSV6__GcE_4FkmUQeAjR72_";
+        const VIDEO_CANDIDATES = [
+          "/video.mp4",
+          FINAL_VIDEO_SRC,
+          "https://lh3.googleusercontent.com/d/1yYMLp3XppaSV6__GcE_4FkmUQeAjR72_"
+        ];
+
+        let candidateIndex = 0;
+        let skipBtn = null;
+        let fadeInTimer = null;
+        let canplayReached = false;
+        let canplayTimer = null;
+
+        function createSkipButton(video) {
+          if (skipBtn) return;
+
+          skipBtn = document.createElement('button');
+          skipBtn.className = 'skip-btn-fixed';
+          skipBtn.textContent = 'Skip';
+          skipBtn.type = 'button';
+
+          function onSkipTap(e) {
+            if (e) {
+              e.stopPropagation();
+              if (e.preventDefault) e.preventDefault();
+            }
+
+            console.log('Skip button tapped');
+
+            if (video) {
+              try {
+                if (!video.paused) {
+                  video.pause();
+                }
+                if (!isNaN(video.duration) && isFinite(video.duration) && video.duration > 0) {
+                  video.currentTime = Math.max(0, video.duration - 0.1);
+                }
+                video.dispatchEvent(new Event('ended'));
+              } catch (err) {
+                console.warn('Skip pause warning:', err);
+              }
+            }
+
+            try {
+              document.documentElement.style.overflow = 'auto';
+              document.body.style.overflow = 'auto';
+              document.body.style.touchAction = 'auto';
+            } catch (err) {
+              console.warn('Scroll unlock error:', err);
+            }
+
+            const invCard = document.getElementById('invitation-card') || document.querySelector('section:nth-of-type(2)') || document.querySelectorAll('section')[1];
+            if (invCard) {
+              invCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+              window.scrollTo({ top: window.innerHeight, behavior: 'smooth' });
+            }
+          }
+
+          skipBtn.addEventListener('click', onSkipTap, true);
+          skipBtn.addEventListener('touchstart', onSkipTap, { capture: true, passive: false });
+
+          document.body.appendChild(skipBtn);
+
+          fadeInTimer = setTimeout(function() {
+            if (skipBtn) {
+              skipBtn.classList.add('fade-in');
+            }
+          }, 500);
+        }
+
+        function showChhooKarDekhiye(video) {
+          let promptEl = document.getElementById('tap-to-play-prompt');
+          if (promptEl) return;
+
+          promptEl = document.createElement('div');
+          promptEl.id = 'tap-to-play-prompt';
+          promptEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:#08162b;color:#f0d9a0;border:1px solid #d4a94f;padding:12px 24px;border-radius:24px;font-family:Jost,sans-serif;font-size:14px;letter-spacing:0.1em;cursor:pointer;text-align:center;pointer-events:auto;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
+          promptEl.textContent = 'Chhoo kar dekhiye';
+
+          function handlePromptTap(e) {
+            if (e) {
+              e.stopPropagation();
+              if (e.preventDefault) e.preventDefault();
+            }
+            if (promptEl && promptEl.parentNode) {
+              promptEl.parentNode.removeChild(promptEl);
+            }
+            if (video) {
+              video.muted = false;
+              video.play().catch(function(err) {
+                console.warn('Re-play on tap error:', err);
+              });
+            }
+          }
+
+          promptEl.addEventListener('click', handlePromptTap, true);
+          promptEl.addEventListener('touchstart', handlePromptTap, { capture: true, passive: false });
+
+          document.body.appendChild(promptEl);
+        }
+
+        function attemptVideoPlay(video) {
+          if (!video) return;
+          video.muted = false;
+          const promise = video.play();
+          if (promise && typeof promise.catch === 'function') {
+            promise.catch(function(err) {
+              console.warn('play() rejected:', err);
+              showChhooKarDekhiye(video);
+            });
+          }
+        }
+
+        function observeVideo() {
+          function checkVideo() {
+            const video = document.querySelector('video');
+            if (video) {
+              if (!video.dataset.srcUpdated) {
+                video.dataset.srcUpdated = 'true';
+                video.removeAttribute('crossorigin');
+                video.removeAttribute('crossOrigin');
+                video.muted = false;
+                video.setAttribute('playsinline', '');
+                video.setAttribute('preload', 'auto');
+                video.src = VIDEO_CANDIDATES[candidateIndex];
+                try {
+                  video.load();
+                } catch (err) {
+                  console.warn('Video load warning:', err);
+                }
+              }
+
+              if (!video.dataset.skipBound) {
+                video.dataset.skipBound = 'true';
+
+                video.addEventListener('loadstart', function() {
+                  console.log('loadstart');
+                });
+
+                video.addEventListener('loadeddata', function() {
+                  console.log('loadeddata');
+                });
+
+                video.addEventListener('canplay', function() {
+                  canplayReached = true;
+                  console.log('canplay');
+                  if (canplayTimer) {
+                    clearTimeout(canplayTimer);
+                    canplayTimer = null;
+                  }
+                });
+
+                video.addEventListener('playing', function() {
+                  console.log('playing');
+                  createSkipButton(video);
+                });
+
+                video.addEventListener('stalled', function() {
+                  console.log('stalled');
+                });
+
+                video.addEventListener('waiting', function() {
+                  console.log('waiting');
+                });
+
+                video.addEventListener('error', function() {
+                  const code = video.error ? video.error.code : null;
+                  const msg = video.error ? video.error.message : null;
+                  console.log('error', code, msg);
+
+                  // If error occurs and candidate URLs remain, try next candidate URL
+                  if (candidateIndex < VIDEO_CANDIDATES.length - 1) {
+                    candidateIndex++;
+                    console.log('Trying fallback video source:', VIDEO_CANDIDATES[candidateIndex]);
+                    video.src = VIDEO_CANDIDATES[candidateIndex];
+                    try {
+                      video.load();
+                      attemptVideoPlay(video);
+                    } catch (e) {
+                      console.warn('Fallback video load error:', e);
+                    }
+                  } else {
+                    const container = (video && video.parentElement) || document.getElementById('video-container');
+                    if (container) {
+                      container.style.backgroundColor = '#0A1F1F';
+                    }
+                    video.dispatchEvent(new Event('ended'));
+                  }
+                });
+
+                video.addEventListener('play', function() {
+                  createSkipButton(video);
+                });
+
+                // 8-second canplay timeout check
+                canplayTimer = setTimeout(function() {
+                  if (!canplayReached) {
+                    console.log('VIDEO_TIMEOUT');
+                    const container = (video && video.parentElement) || document.getElementById('video-container');
+                    if (container) {
+                      container.style.backgroundColor = '#0A1F1F';
+                    }
+                    video.dispatchEvent(new Event('ended'));
+                  }
+                }, 8000);
+              }
+
+              if (!video.dataset.tapBound) {
+                video.dataset.tapBound = 'true';
+
+                const handleTapToPlay = function() {
+                  attemptVideoPlay(video);
+                };
+
+                document.addEventListener('click', handleTapToPlay, { once: false, capture: true });
+                document.addEventListener('touchstart', handleTapToPlay, { once: false, capture: true, passive: true });
+
+                window.addEventListener('opening:complete', function() {
+                  attemptVideoPlay(video);
+                });
+              }
+            }
+          }
+
+          const observer = new MutationObserver(checkVideo);
+          observer.observe(document.body, { childList: true, subtree: true });
+          checkVideo();
+        }
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', observeVideo);
+        } else {
+          observeVideo();
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
