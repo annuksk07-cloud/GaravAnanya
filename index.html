@@ -48,6 +48,38 @@
         background: #000;
         overflow: hidden;
       }
+      @keyframes envelopeTapPulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.85;
+        }
+      }
+      .envelope-tap-text {
+        position: absolute;
+        left: 50%;
+        top: calc(50% + 54px);
+        transform: translateX(-50%);
+        z-index: 60;
+        font-family: 'Pinyon Script', cursive;
+        font-weight: 400;
+        color: #0e5f68;
+        letter-spacing: 0.02em;
+        text-transform: none;
+        font-size: clamp(26px, 7vw, 36px);
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+        user-select: none;
+        opacity: 0;
+        transition: opacity 0.8s ease-in-out;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.6), 0 1px 2px rgba(8, 22, 43, 0.25);
+      }
+      .envelope-tap-text.visible {
+        opacity: 1;
+        animation: envelopeTapPulse 2.4s ease-in-out 0.8s infinite;
+      }
       .skip-btn-fixed {
         position: fixed;
         right: 4vw;
@@ -193,6 +225,49 @@
         let canplayReached = false;
         let canplayTimer = null;
         let overlayShown = false;
+        let envelopeTapEl = null;
+        let envelopeTapTimer = null;
+
+        function setupEnvelopeTapText() {
+          if (envelopeTapEl) return;
+          envelopeTapEl = document.createElement('div');
+          envelopeTapEl.id = 'envelope-tap-text';
+          envelopeTapEl.className = 'envelope-tap-text';
+          envelopeTapEl.textContent = 'Tap to open';
+
+          const envContainer = document.querySelector('.z-50.fixed.inset-0') || document.body;
+          envContainer.appendChild(envelopeTapEl);
+
+          envelopeTapTimer = setTimeout(function() {
+            if (envelopeTapEl) {
+              const currentEnv = document.querySelector('.z-50.fixed.inset-0');
+              if (currentEnv && envelopeTapEl.parentNode !== currentEnv) {
+                currentEnv.appendChild(envelopeTapEl);
+              }
+              envelopeTapEl.classList.add('visible');
+            }
+          }, 1000);
+
+          function removeEnvelopeTapText() {
+            if (envelopeTapTimer) {
+              clearTimeout(envelopeTapTimer);
+              envelopeTapTimer = null;
+            }
+            if (envelopeTapEl) {
+              envelopeTapEl.classList.remove('visible');
+              const el = envelopeTapEl;
+              envelopeTapEl = null;
+              setTimeout(function() {
+                if (el && el.parentNode) {
+                  el.parentNode.removeChild(el);
+                }
+              }, 800);
+            }
+          }
+
+          document.addEventListener('click', removeEnvelopeTapText, { once: true, capture: true });
+          document.addEventListener('touchstart', removeEnvelopeTapText, { once: true, capture: true, passive: true });
+        }
 
         function showOverlay(video, isFallback) {
           if (overlayShown) return;
@@ -299,8 +374,8 @@
 
           promptEl = document.createElement('div');
           promptEl.id = 'tap-to-play-prompt';
-          promptEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:99999;background:#08162b;color:#f0d9a0;border:1px solid #d4a94f;padding:12px 24px;border-radius:24px;font-family:Jost,sans-serif;font-size:14px;letter-spacing:0.1em;cursor:pointer;text-align:center;pointer-events:auto;box-shadow:0 4px 12px rgba(0,0,0,0.5);';
-          promptEl.textContent = 'Chhoo kar dekhiye';
+          promptEl.style.cssText = 'position:absolute;top:calc(50% + 54px);left:50%;transform:translateX(-50%);z-index:99999;color:#0e5f68;font-family:\'Pinyon Script\',cursive;font-weight:400;font-size:clamp(26px,7vw,36px);letter-spacing:0.02em;cursor:pointer;text-align:center;pointer-events:auto;text-shadow:0 0 8px rgba(255,255,255,0.6),0 1px 2px rgba(8,22,43,0.25);white-space:nowrap;';
+          promptEl.textContent = 'Tap to open';
 
           function handlePromptTap(e) {
             if (e) {
@@ -337,6 +412,8 @@
         }
 
         function observeVideo() {
+          setupEnvelopeTapText();
+
           function checkVideo() {
             const video = document.querySelector('video');
             if (video) {
